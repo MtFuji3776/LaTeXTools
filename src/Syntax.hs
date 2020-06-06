@@ -11,13 +11,16 @@ import Text.LaTeX.Packages.AMSFonts
 import Text.LaTeX.Packages.AMSSymb
 import Data.Semigroup
 import Control.Monad.Writer.Strict hiding((<>))
+import System.Directory
 --import Lens.Control
 
 
-path = "./latexs/output"
+path = (++"/output") <$> getCurrentDirectory
 
 output :: T.Text -> IO ()
-output xs = TIO.writeFile path xs
+output xs = do
+    path' <- path
+    TIO.writeFile path' xs
 
 type ProtoNode = T.Text
 
@@ -42,8 +45,20 @@ node = Node
 data Vertical = V{
     yFrom :: Double,
     yTo :: Double,
-    quantifier :: Maybe T.Text
+    quantifier :: Quantifier
 } deriving (Eq,Show)
+
+data Quantifier = Forall | Exists | Exists' deriving(Eq,Show)
+
+evalQ :: Quantifier -> LaTeX
+evalQ Forall  = let on = OptNode "above" "\\forall" in evalOptNode on
+evalQ Exists  = let on = OptNode "above" "\\exists" in evalOptNode on
+evalQ Exists' = let on = OptNode "above" "\\exists !" in evalOptNode on
+
+vertical :: Double -> Double -> Quantifier -> Vertical
+vertical = V
+
+vert = vertical 0
 
 fromVal :: (Show a,LaTeXC l) => a -> l
 fromVal = raw . T.pack . show
@@ -53,14 +68,15 @@ evalVer (V yf yt q) = execLaTeXM $ do
     let rbraces x = between x "(" ")"
     let fromVal = raw . T.pack . show
     let coordinate x y = rbraces $ between "," (fromVal x) (fromVal y)
-    case q of Nothing -> do{raw "\\draw[-Butt Cap] " ; coordinate 0 (yf-0.2) ; " to "   ; coordinate 0 (yt+0.2) ; ";"};
-              Just x -> do{raw "\\draw[-Butt Cap] " ; coordinate 0 (yf-0.2) ; " to " ; " " ; coordinate 0 (yt+0.2) ; "node[above] "; braces (math . raw $ x) ; ";"}
+    --case q of Nothing -> do{raw "\\draw[-Butt Cap] " ; coordinate 0 (yf-0.2) ; " to "   ; coordinate 0 (yt+0.2) ; ";"};
+    do{raw "\\draw[-Butt Cap] " ; coordinate 0 (yf-0.2) ; " to " ; " " ; coordinate 0 (yt+0.2) ;fromLaTeX (evalQ q) ; ";"}
 
-data DrawOption = Monic | Epic | Cover | Xshift Double | Yshift Double deriving (Eq,Show)
+data DrawOption = Emp | Monic | Epic | Cover | Xshift Double | Yshift Double deriving (Eq,Show)
 
 evalDrawOption dopt = execLaTeXM $ do
     raw "\\draw"
-    case dopt of Monic -> "[|-Stealth]"; 
+    case dopt of Emp -> "";
+                 Monic -> "[|-Stealth]"; 
                  Epic  -> "[->Stealth]";
                  Cover -> raw "[-{Stealth[open]}]";
                  Xshift x -> do{"[transform canvas = " ; braces (do{"xshift = " ; fromVal x ;  "pt"}) ; "]"}
@@ -88,9 +104,13 @@ data Diagram = Obj Node
     | OptMor{ arr :: ProtoArrow,drawOpt :: DrawOption, optNode :: OptNode }
     | Ver Vertical 
     | Syms Symbols
+    | Custom T.Text
     | Seq Diagram Diagram 
     | Unit 
     deriving(Eq,Show)
+
+instance IsString Diagram where
+    fromString = Custom . T.pack
 
 draw :: DrawOption -> ProtoArrow -> OptNode -> Diagram
 draw xs pa optnode = OptMor pa xs optnode
@@ -100,6 +120,7 @@ evalDiagram (Obj n)     = evalNode n
 evalDiagram (Mor pa)    = evalPA pa
 evalDiagram (OptMor pa dopt optn) = evalOptMor $ OptMor pa dopt optn
 evalDiagram (Ver v)     = evalVer v
+evalDiagram (Custom xs) = raw xs
 evalDiagram (Seq d1 d2) = evalDiagram d1 <> raw "\n" <> evalDiagram d2
 evalDiagram Unit        = mempty
 
@@ -143,3 +164,11 @@ env_diagram :: LaTeX -> LaTeX
 env_diagram x =  env1 "center" $ TeXEnv "tikzpicture" [MOptArg ["-Stealth"]] $ between x "\n" "\n"
 
 
+class (Monoid d,IsString d) => DiagramC d where
+    liftListD :: ([Diagram] -> Diagram) -> [d] -> d
+
+instance DiagramC Diagram where
+    liftListD = id
+
+fromDiagram :: DiagramC d => Diagram -> d
+fromDiagram l = liftListD (const l) []
