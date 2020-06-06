@@ -14,7 +14,7 @@ import Control.Monad.Writer.Strict hiding((<>))
 --import Lens.Control
 
 
-path = "/Users/fujimotomakoto/documents/latexs/output"
+path = "./latexs/output"
 
 output :: T.Text -> IO ()
 output xs = TIO.writeFile path xs
