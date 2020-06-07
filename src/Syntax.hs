@@ -34,13 +34,13 @@ data Node = Node {
     nameOfNode :: T.Text,
     xCoor :: Double,
     yCoor :: Double,
-    labelOfNode :: Maybe LaTeX
+    labelOfNode :: Maybe T.Text
 }deriving(Eq,Show)
 
-(-->) :: ProtoNode -> ProtoNode -> T.Text -> ProtoArrow
-(-->) p1 p2 n = PA p1 p2 n
+(-->) :: ProtoNode -> ProtoNode -> T.Text -> Diagram
+(-->) p1 p2 n = Mor $ PA p1 p2 n
 
-node = Node
+node n x y l = Obj $ Node n x y l
 
 data Vertical = V{
     yFrom :: Double,
@@ -55,8 +55,8 @@ evalQ Forall  = let on = OptNode "above" "\\forall" in evalOptNode on
 evalQ Exists  = let on = OptNode "above" "\\exists" in evalOptNode on
 evalQ Exists' = let on = OptNode "above" "\\exists !" in evalOptNode on
 
-vertical :: Double -> Double -> Quantifier -> Vertical
-vertical = V
+vertical :: Double -> Double -> Quantifier -> Diagram
+vertical y1 y2 q = Ver $ V y1 y2 q
 
 vert = vertical 0
 
@@ -69,7 +69,7 @@ evalVer (V yf yt q) = execLaTeXM $ do
     let fromVal = raw . T.pack . show
     let coordinate x y = rbraces $ between "," (fromVal x) (fromVal y)
     --case q of Nothing -> do{raw "\\draw[-Butt Cap] " ; coordinate 0 (yf-0.2) ; " to "   ; coordinate 0 (yt+0.2) ; ";"};
-    do{raw "\\draw[-Butt Cap] " ; coordinate 0 (yf-0.2) ; " to " ; " " ; coordinate 0 (yt+0.2) ;fromLaTeX (evalQ q) ; ";"}
+    do{between (raw "&") (raw "\n") (raw "\n") ;raw "\\draw[-Butt Cap] " ; coordinate 0 (yf-0.2) ; " to " ; " " ; coordinate 0 (yt+0.2) ;fromLaTeX (evalQ q) ; ";" ; between (raw "&") (raw "\n") (raw "\n")}
 
 data DrawOption = Emp | Monic | Epic | Cover | Xshift Double | Yshift Double deriving (Eq,Show)
 
@@ -101,7 +101,7 @@ evalOptNode (OptNode p l) = execLaTeXM $ do
 
 data Diagram = Obj Node 
     | Mor ProtoArrow 
-    | OptMor{ arr :: ProtoArrow,drawOpt :: DrawOption, optNode :: OptNode }
+    | OptMor{ arr :: Diagram,drawOpt :: DrawOption, optNode :: OptNode }
     | Ver Vertical 
     | Syms Symbols
     | Custom T.Text
@@ -112,7 +112,7 @@ data Diagram = Obj Node
 instance IsString Diagram where
     fromString = Custom . T.pack
 
-draw :: DrawOption -> ProtoArrow -> OptNode -> Diagram
+draw :: DrawOption -> Diagram -> OptNode -> Diagram
 draw xs pa optnode = OptMor pa xs optnode
 
 evalDiagram :: Diagram -> LaTeX
@@ -130,14 +130,14 @@ evalNode (Node n x y lab) = execLaTeXM $ do
     let fromVal = raw . T.pack . show
     raw "\\node (" ; raw n ; ") at "
     "(" ; fromVal x ; "," ; fromVal y ; ") "
-    case lab of Nothing -> do{braces ""; raw "; \\fill ("; raw n ; ") circle (2pt);" }; (Just l) -> do{braces . math . fromLaTeX $ l ; ";"}
+    case lab of Nothing -> do{braces ""; raw "; \\fill ("; raw n ; ") circle (2pt);" }; (Just l) -> do{braces . math . raw $ l ; ";"}
 
 evalPA :: ProtoArrow -> LaTeX
 evalPA (PA d c n)= execLaTeXM $ do
     let rbraces x = between x "(" ")"
     raw "\\draw " ; rbraces (raw d) ; " to " ; rbraces (raw c) ; ";"
 
-evalOptMor (OptMor (PA d c n) dro on) = execLaTeXM $ do
+evalOptMor (OptMor (Mor (PA d c n)) dro on) = execLaTeXM $ do
     let squarebraces x = between x "[" "]"
     let rbraces x = between x "(" ")"
     fromLaTeX (evalDrawOption dro) -- \draw[dro]

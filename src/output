@@ -1,1 +1,29 @@
-aiueo
+
+&
+\draw[-Butt Cap] (0.0,-0.2) to  (0.0,2.2)node[above] {$\forall$} ;
+&
+
+\node (a) at (0.0,2.0) {$A$};
+\node (gb) at (2.0,0.0) {$GB$};
+\draw (a) to (gb);
+
+&
+\draw[-Butt Cap] (0.0,-0.2) to  (0.0,2.2)node[above] {$\exists$} ;
+&
+
+\node (a) at (0.0,2.0) {$A$};
+\node (gb) at (2.0,0.0) {$GB$};
+\draw (a) to (gb);
+\node (gfa) at (2.0,2.0) {$GFA$};
+\draw (a) to node[above] {$\eta_A$}  (gfa);
+
+&
+\draw[-Butt Cap] (0.0,-0.2) to  (0.0,2.2)node[above] {$\exists !$} ;
+&
+
+\node (a) at (0.0,2.0) {$A$};
+\node (gb) at (2.0,0.0) {$GB$};
+\draw (a) to (gb);
+\node (gfa) at (2.0,2.0) {$GFA$};
+\draw (a) to node[above] {$\eta_A$}  (gfa);
+\draw (gfa) to node[right] {$Gx$}  (gb);
