@@ -31,8 +31,8 @@ instance (Monad m) => Monad (DiagramT m) where
         let DGT z = f y
         z
 
--- instance (Monad m,a ~ ()) => DiagramC (DiagramT m a) where
---     liftListD f xs = mapM extractDiagram_ xs >>= dgtell . f --これがWriterTモナドのdo文で自然に各行のモノイド値をtellして結合できる秘訣だと思われる
+instance (Monad m) => DiagramC (DiagramT m a) where
+    liftListD f xs = mapM extractDiagram_ xs >>= dgtell . f --これがWriterTモナドのdo文で自然に各行のモノイド値をtellして結合できる秘訣だと思われる
 
 instance MonadTrans DiagramT where
    lift = DGT . lift 

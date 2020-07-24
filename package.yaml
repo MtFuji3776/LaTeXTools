@@ -28,6 +28,7 @@ dependencies:
 - containers
 - lens
 - directory
+- turtle
 
 library:
   source-dirs: src

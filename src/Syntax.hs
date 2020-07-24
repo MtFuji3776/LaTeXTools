@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,TemplateHaskell #-}
 module Syntax where
 
 import Text.LaTeX.Base hiding((<>))
@@ -12,7 +12,7 @@ import Text.LaTeX.Packages.AMSSymb
 import Data.Semigroup
 import Control.Monad.Writer.Strict hiding((<>))
 import System.Directory
---import Lens.Control
+import Control.Lens.TH
 
 
 path = (++"/output") <$> getCurrentDirectory
@@ -172,3 +172,33 @@ instance DiagramC Diagram where
 
 fromDiagram :: DiagramC d => Diagram -> d
 fromDiagram l = liftListD (const l) []
+
+
+-- fixComm str = liftListL (TeXComm str . fmap FixArg)
+-- matrix x = fixComm [TeXOpt "matrix"] 
+
+data Foo = F{_x:: Int,_y :: Int} deriving(Show)
+makeLenses ''Foo
+
+data NewNode = N{_nameOfNN :: T.Text,
+                 _xCo :: Double,
+                 _yCo :: Double,
+                 _labelOfNN :: T.Text}deriving(Show)
+makeLenses ''NewNode
+
+data Vect = Vect {xComp :: Double,yComp :: Double} deriving(Eq,Ord,Show)
+
+instance Num Vect where
+    (Vect x1 y1) + (Vect x2 y2) = Vect (x1 + x2) (y1 + y2)
+    (Vect x1 y1) * (Vect x2 y2) = Vect (x1 * x2) (y1 * y2)
+    (Vect x1 y1) - (Vect x2 y2) = Vect (x1 - x2) (y1 - y2)
+    abs (Vect x1 x2) = let norm (Vect x y) = sqrt (x*x + y*y) in Vect (norm $ Vect x1 x2) 0
+    signum (Vect x y) = Vect (signum x) (signum y)
+    fromInteger n = Vect (fromInteger n) (fromInteger n)
+
+instance Semigroup Vect where
+    v1 <> v2 = v1 + v2
+
+instance Monoid Vect where
+    mempty = Vect 0 0
+    mappend = (<>)
