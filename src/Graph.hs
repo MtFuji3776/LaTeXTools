@@ -4,6 +4,7 @@ module Graph where
 
 import Data.Set(Set,empty,singleton,union,fromList,toList)
 import Data.List(sort)
+import qualified Data.Graph as G
 
 data Graph a = Empty
              | Vertex a
@@ -50,11 +51,11 @@ proj2 :: Graph a -> Graph a
 proj2 (Overlay g1 g2) = g2
 proj2 g = g
 
-destruct :: Graph a -> [Graph a] -- 点集合と辺集合を同時に適切に得る方法が思いつかない。
-destruct Empty = []
-destruct (Vertex x) = [Vertex x]
-destruct (Overlay g1 g2) = destruct g1 ++ destruct g2
-destruct (Connect g1 g2) = destruct g1 ++ destruct g2 ++ [Connect x y | x <- destruct g1, y<- destruct g2]
+-- destruct :: Graph a -> [Graph a] -- 点集合と辺集合を同時に適切に得る方法が思いつかない。
+-- destruct Empty = []
+-- destruct (Vertex x) = [Vertex x]
+-- destruct (Overlay g1 g2) = destruct g1 ++ destruct g2
+-- destruct (Connect g1 g2) = destruct g1 ++ destruct g2 ++ [Connect x y | x <- destruct g1, y<- destruct g2]
 
 
 getVertices :: Ord a => Graph a -> Set a
@@ -69,13 +70,25 @@ getEdges (Vertex x) = []
 getEdges (Overlay g1 g2) = getEdges g1 ++ getEdges g2
 getEdges (Connect g1 g2) = getEdges g1 ++ getEdges g2 ++ [(x,y) | x <- toList(getVertices g1), y <- toList (getVertices g2)]
 
-deconstract :: Ord a => Graph a -> ([a],[(a,a)]) --頂点集合と辺集合それぞれの構成で二回再帰を回さなくちゃいけないのがちょっと気持ち悪い。一回で済ませる方法はないか？
-deconstract g = (toList . getVertices $ g,sort . getEdges $ g)
+destruct :: Ord a => Graph a -> ([a],[(a,a)]) --頂点集合と辺集合それぞれの構成で二回再帰を回さなくちゃいけないのがちょっと気持ち悪い。一回で済ませる方法はないか？
+destruct g = (toList . getVertices $ g,sort . getEdges $ g)
+-- 一回で済ませる方法は一応ある。蓄積引数法またはStateモナドを使うのだ。それでタプルを状態に持ち、第一成分ではgetVerticesの関数を、第二成分ではgetEdgesを計算させる。
+-- このやり方なら、引数としてgを一つ受け取ればよく、現状のdeconstractのようにgの再帰構造を二回壊すよりも半分の時間で済むはずだ。
 
 -- uncurry graph . deconstract = id
 -- deconstract . uncurry graph = id
 -- が成立。コンストラクタとデストラクタで同型。
 
+data Rose a = Rose a [Rose a] deriving(Show)
+
+--この定義は問題なく動作するが、filterとmapをあまりに繰り返し過ぎている気がしなくもない。タプルのリストをArrayにすることで計算時間を優位に改善できる気がしている。
+generate :: Ord a => Graph a -> a -> Rose a
+generate g v = let ts = snd (destruct g)
+                   children = map snd . filter (\t -> fst t == v) $ ts -- 第一成分がvになるタプルの第二成分全体のリスト＝v直下の部分木の根
+               in Rose v $ map (generate g) children
+
+
+-- ここから図式言語
 data Node = Node {name :: Int, xCoor :: Double, yCoor :: Double , nodeLabel :: String}
 
 instance Show Node where
@@ -84,24 +97,60 @@ instance Show Node where
 data Option = Monic | Epic | Cover | Equalizer | XShift Double | YShift Double | XYShift Double Double | ButtCap | Stealth | Custom String 
 
 instance Show Option where
-    show Monic = "[|-stealth]"
-    show Cover = ""
+    show Monic = "|-stealth"
+    show Cover = "-{Stealth[open]}"
+    show Epic  = "->{stealth}"
+    show Equalizer = ">-stealth"
+    show (XShift x) = "transform canvas = {xshift = " ++ show x ++ "}"
+    show (YShift y) = "transform canvas = {yshift = " ++ show y ++ "}"
+    show (XYShift x y) = "transform canvas = {xshift = " ++ show x ++ ",yshift = " ++ show y ++ "}"
+    show ButtCap = "-Butt Cap"
+    show Stealth = "-stealth"
+    show (Custom xs) = xs
 
-data Draw = Draw{idDraw :: Int, options :: [Option], dom :: Int, cod :: Int, drawLabel :: String}
+data Draw a = Draw{idDraw :: Int, options :: [Option], dom :: a, cod :: a, drawLabel :: String}
 
-instance Show Draw where
+instance Show a => Show (Draw a) where
     show (Draw i o d c dr) = show i ++ ":\\draw" ++ show o ++ " (" ++ show d ++ ") to (" ++ show c ++ ");\n"
 
-planeNode :: Graph Int -> Node -- Partial Function
-planeNode (Vertex a) = Node a 0 0 ""
+instance Functor Draw where
+    fmap f (Draw n os d c l) = Draw n os (f d) (f c) l
 
-planeDraw :: Graph Int -> Int -> Draw -- Partial Function
-planeDraw (Connect (Vertex n) (Vertex m)) x = Draw x [] n m ""
+setup :: ([Int],[(Int,Int)]) -> ([Graph Int],[Graph Int])
+setup = cross (map Vertex) (map (uncurry Connect . cross Vertex Vertex))
+
+cross :: (a -> b) -> (c -> d) -> (a,c) -> (b,d)
+cross f g (x,y) = (f x,g y)
+
+planeNode :: Int -> Node
+planeNode a = Node a 0 0 ""
+
+planeDraw :: (Int,Int) -> Int -> Draw Int
+planeDraw (n,m) x = Draw x [] n m ""
+
+nodedraws :: ([Int],[(Int,Int)]) -> ([Node],[Draw Int])
+nodedraws (ns,es) = let es' = zip es [1..] in cross (map planeNode) (map (uncurry planeDraw)) (ns,es')
+
+-- Draw値の更新オペレータ
+setOption :: [Option] -> Draw a -> Draw a
+setOption os (Draw n ops d c l) = Draw n os d c l
+
+setLabel :: String -> Draw a -> Draw a
+setLabel l (Draw n os d c l') = Draw n os d c l
+
+-- プレーンなDrawのOptionとLabelを更新するオペレータ。setOptLab'はID
+setOptLab' n op l d = if n == idDraw d then setOption op . setLabel l $ d
+                                       else d
+
+setOptLab op l d = setOptLab' (idDraw d) op l d
+
+view :: Show a => [a] -> IO ()
+view = putStrLn . concatMap show
 
 -- mkDraws :: Graph Int -> [Draw] --Partial Function
 -- mkDraws g = let xs = getEdges g in zipWith planeDraw xs [1,2..]
 
-data Diagram = Dia [Node] [Draw] deriving (Show)
+data Diagram a = Dia [Node] [Draw a] deriving (Show)
 
 -- planeDiagram :: Graph Int -> Diagram
 -- planeDiagram g = Dia (map planeNode . getVertices $ g) (concatMap mkDraws . getEdges $ g)
