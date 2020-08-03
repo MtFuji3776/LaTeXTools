@@ -81,6 +81,9 @@ destruct g = (toList . getVertices $ g,sort . getEdges $ g)
 
 data Rose a = Rose a [Rose a] deriving(Show)
 
+instance Functor Rose where
+    fmap f (Rose x rs) = Rose (f x) $ map (fmap f) rs
+
 --この定義は問題なく動作するが、filterとmapをあまりに繰り返し過ぎている気がしなくもない。タプルのリストをArrayにすることで計算時間を優位に改善できる気がしている。
 generate :: Ord a => Graph a -> a -> Rose a
 generate g v = let ts = snd (destruct g)
