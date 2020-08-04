@@ -37,8 +37,14 @@ clique = foldr Connect Empty .map Vertex
 edges :: [(a,a)] -> Graph a
 edges = foldr Overlay Empty . map (uncurry edge)
 
-graph :: [a] -> [(a,a)] -> Graph a
-graph vs es = Overlay (vertices vs) (edges es)
+graph' :: [a] -> [(a,a)] -> Graph a
+graph' vs es = Overlay (vertices vs) (edges es)
+
+graph :: ([a],[(a,a)]) -> Graph a
+graph = uncurry graph'
+
+normalize :: Ord a => Graph a -> Graph a
+normalize = graph . destruct
 
 buildG :: Num a => [a] -> [Graph a] -> Graph a -- 第二引数はVertex a2 * Vertex a2の形のグラフのみ書くこと。…GADTでConnectに固有の型をつけたほうが確実か？
 buildG xs es = vertices xs + foldr (+) Empty es
