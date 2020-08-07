@@ -3,13 +3,15 @@ module DiagramLang where
 import Graph
 import TikZ
 
-data Symbols a = Product a
-               | Equalize a
-               | Pullback a
-               | CoProduct a
-               | CoEqualizer a
-               | Pushout a
+data Symbols a = Product a [a]
+               | Equalize a [a]
+               | Pullback a [a]
+               | CoProduct a [a]
+               | CoEqualizer a [a]
+               | Pushout a [a]
                | Reticle a deriving(Show)
+
+gravitypoint vs = 
 
 data Quantifier = EmptyQ | Forall | Exists | ExistsOnly deriving(Eq)
 
@@ -22,6 +24,7 @@ instance Show Quantifier where
 data Vertical = Eps | Vertical Double Double Quantifier
 
 instance Show Vertical where
+    show Eps = ""
     show (Vertical y1 y2 q) = "&\n\\draw[-Butt Cap] (0," ++ show (y1 - 0.2)
                                                          ++ ") to (0,"
                                                          ++ show (y2 + 0.2)
@@ -29,26 +32,32 @@ instance Show Vertical where
                                                          ++ show q
                                                          ++ "};\n&\n"
 
-type Label = String
-data AttachNode = ANode Place Label
+-- type Label = String
+-- data AttachNode = ANode Place Label deriving(Show)
 
-data Place = Above 
-           | Below 
-           | LeftN 
-           | RightN 
-           | AboveRight 
-           | AboveLeft 
-           | BelowLeft 
-           | BelowRight
-instance Show Place where
-    show Above      = "above"
-    show Below      = "below"
-    show LeftN       = "left"
-    show RightN      = "right"
-    show AboveRight = "above right"
-    show AboveLeft  = "above left"
-    show BelowLeft  = "below left"
-    show BelowRight = "below right"
+-- data Place = EpsPlace
+--            | Above 
+--            | Below 
+--            | LeftN 
+--            | RightN 
+--            | AboveRight 
+--            | AboveLeft 
+--            | BelowLeft 
+--            | BelowRight
+-- instance Show Place where
+--     show EpsPlace   = ""
+--     show Above      = "above"
+--     show Below      = "below"
+--     show LeftN       = "left"
+--     show RightN      = "right"
+--     show AboveRight = "above right"
+--     show AboveLeft  = "above left"
+--     show BelowLeft  = "below left"
+--     show BelowRight = "below right"
+
+-- -- AttachNodeをDrawに作用させるオペレータ
+-- (/\) :: Draw a -> Label -> Draw a
+-- (Draw n ops d c )
 
 data ArrowOption = Monic | Epic | Cover | Equalizer | XShift Double | YShift Double | XYShift Double Double | ButtCap | Stealth | Custom String 
 
@@ -72,7 +81,7 @@ data ArrowOptions = ArrOpt{idD :: Int,
 
 data DiagramLang = DiaLan{vert :: Vertical,
                           objs :: [Node],
-                          arrs :: [Draw],
-                          symbs :: [Symbols],
+                          arrs :: [Draw Int],
+                          symbs :: [Symbols Int],
                           arrOpts :: [ArrowOptions]}deriving(Show)
 
