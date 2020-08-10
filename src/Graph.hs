@@ -91,7 +91,16 @@ destruct g = (toList . getVertices $ g,sort . getEdges $ g)
 -- deconstract . uncurry graph = id
 -- が成立。コンストラクタとデストラクタで同型。
 
-data Rose a = Rose a [Rose a] deriving(Show)
+path :: [a] -> Graph a
+path [] = Empty
+path [x] = Vertex x
+path xs = let ys = map Vertex xs in foldr Overlay Empty $ zipWith Connect ys $ tail ys
+
+
+data Rose a = Rose{nodeR :: a, childrenR :: [Rose a]}
+
+instance Show a => Show (Rose a) where
+    show (Rose x ts) = show x ++ "\n" ++ concatMap show ts
 
 instance Functor Rose where
     fmap f (Rose x rs) = Rose (f x) $ map (fmap f) rs

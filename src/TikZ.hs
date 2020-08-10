@@ -1,5 +1,6 @@
 module TikZ where
 
+import qualified Data.Map as Map
 import Graph
 
 -- 座標計算用にベクトル型を定義しておく。データ構造のData.Vectorと違い数値計算に特化させる。
@@ -62,6 +63,7 @@ instance Ord Node where
 instance Show Node where
     show (Node n x y l) = "\\node (" ++ show n ++ ") at (" ++ show x ++ "," ++ show y ++ ") {$" ++ l ++ "$};\n"
 
+
 data ProtoNode = PN Double Double String deriving(Show)
 
 fromPN :: ProtoNode -> Node
@@ -87,6 +89,9 @@ instance Num Node where
     negate (Node n x y l) = Node n (-x) (-y) l
     signum (Node n x y l) = Node n (signum x) (signum y) l
 
+instance Monoid Node where
+    mempty = Node 0 0 0 ""
+    mappend n1 n2 = n1 + n2
 
 fromVector :: Vector -> Node
 fromVector (V x y) = Node 0 x y ""
@@ -96,6 +101,63 @@ toVector (Node n x y l) = V x y
 
 (+:) :: Node -> Vector -> Node
 n +: v = n + fromVector v
+
+-- 以下、Node,Drawの連想配列を構成するためのコンビネータ
+
+-- [Node]を連想配列で扱うためのコンビネータ
+diagonal :: a -> (a,a)
+diagonal x = (x,x)
+
+swap :: (a -> b -> c) -> b -> a -> c
+swap f x y = f y x
+
+-- 第1成分に関数を作用させる関数。fmapの類縁。タプルをswapしてfmapしてまたswapするのと同じ。
+actionFst :: (a -> b) -> (a,a1) -> (b,a1)
+actionFst f = cross f id
+
+-- Node,Drawを渡すと、そのName/IDとペアにする関数。連想配列をfromListで行うためのツール。
+bindKey :: (a -> b) -> a -> (b,a)
+bindKey f = actionFst f . diagonal
+
+nameAndNode :: Node -> (Int,Node)
+nameAndNode = bindKey name
+
+idAndDraw :: Draw a -> (Int,Draw a)
+idAndDraw = bindKey idDraw
+
+-- Node,Drawのリストの組を、その主キーとの組に作り変える
+nodedrawWithKey :: ([Node],[Draw a]) -> ([(Int,Node)],[(Int,Draw a)])
+nodedrawWithKey = cross (map nameAndNode) (map idAndDraw)
+
+-- 主キーとADT値の組を連想配列に変換
+nodedrawMaps :: ([(Int,Node)],[(Int,Draw a)]) -> (Map.Map Int Node,Map.Map Int (Draw a))
+nodedrawMaps = cross Map.fromList Map.fromList
+
+-- グラフデータから連想配列の組まで一気に変換する関数
+constractMaps :: Graph Int -> (Map.Map Int Node,Map.Map Int (Draw Int)) 
+constractMaps = nodedrawMaps . nodedrawWithKey . nodedraws . destruct
+
+-- Nodeの初期値リストを渡すと、連想配列のそれを更新する関数
+appendNodes :: [Node] -> Map.Map Int Node -> Map.Map Int Node
+appendNodes []        = id
+appendNodes (n:ns)    = appendNodes ns . Map.adjust (n+) (name n)
+
+appendProtoDraws :: Num a => [ProtoDraw] -> DrawMap a -> DrawMap a
+appendProtoDraws []     = id
+appendProtoDraws (pd:pds) = appendProtoDraws pds . Map.adjust (actDraw pd) (idPD pd)
+
+type NodeMap = Map.Map Int Node
+type DrawMap a = Map.Map Int (Draw a)
+type NodeDrawMaps a = (NodeMap, DrawMap a)
+
+arrangeNodes :: [Node] -> (NodeMap,DrawMap a) -> (NodeMap,DrawMap a)
+arrangeNodes ns = cross (appendNodes ns) id
+
+arrangeDraws :: Num a => [ProtoDraw] -> (NodeMap,DrawMap a) -> NodeDrawMaps a
+arrangeDraws pds = cross id (appendProtoDraws pds)
+
+arrangeNodeDraws :: Num a => [Node] -> [ProtoDraw] -> NodeDrawMaps a -> NodeDrawMaps a
+arrangeNodeDraws ns pds = cross (appendNodes ns) (appendProtoDraws pds)
 
 -- Name = Intで紐付けされた関数をNodeに適用するための高階関数
 evalByName :: (Int -> Node -> t) -> Node -> t
@@ -144,32 +206,32 @@ instance Show Place where
 
 -- AttachNodeをDrawに作用させるオペレータ群
 -- Aboveをつけるオペレータ。不細工な上矢印記号と思え。
-(/|\) :: Draw a -> Label -> Draw a
-(Draw n ops d c l) /|\ s = Draw n ops d c (ANode Above s) 
+(/|\) :: ProtoDraw -> Label -> ProtoDraw
+(PD n ops l) /|\ s = PD n ops $ ANode Above s
 
 -- AboveRightをつけるオペレータ。中心から見て右上を表す記号
-(|\) :: Draw a -> Label -> Draw a
-(Draw n ops d c l) |\ s = Draw n ops d c (ANode AboveRight s)
+(|\) :: ProtoDraw -> Label -> ProtoDraw
+(PD n ops l) |\ s = PD n ops $ ANode AboveRight s
 
 -- RightN.右を表す。
-(|>) :: Draw a -> Label -> Draw a
-(Draw n ops d c l) |> s = Draw n ops d c (ANode RightN s)
+(|>) :: ProtoDraw -> Label -> ProtoDraw
+(PD n ops l) |> s = PD n ops $ ANode RightN s
 
 --
-(|/) :: Draw a -> Label -> Draw a
-(Draw n ops d c l) |/ s = Draw n ops d c (ANode BelowRight s)
+(|/) :: ProtoDraw -> Label -> ProtoDraw
+(PD n ops l) |/ s = PD n ops $ ANode BelowRight s
 
-(\|/) :: Draw a -> Label -> Draw a
-(Draw n ops d c l) \|/ s = Draw n ops d c (ANode Below s)
+(\|/) :: ProtoDraw -> Label -> ProtoDraw
+(PD n ops l) \|/ s = PD n ops $ ANode Below s
 
-(\|) :: Draw a -> Label -> Draw a
-(Draw n ops d c l) \| s = Draw n ops d c (ANode BelowLeft s)
+(\|) :: ProtoDraw -> Label -> ProtoDraw
+(PD n ops l) \| s = PD n ops $ ANode BelowLeft s
 
-(<|) :: Draw a -> Label -> Draw a
-(Draw n ops d c l) <| s = Draw n ops d c (ANode LeftN s)
+(<|) :: ProtoDraw -> Label -> ProtoDraw
+(PD n ops l) <| s = PD n ops $ ANode LeftN s
 
-(/|) :: Draw a -> Label -> Draw a
-(Draw n ops d c l) /| s = Draw n ops d c (ANode AboveLeft s)
+(/|) :: ProtoDraw -> Label -> ProtoDraw
+(PD n ops l) /| s = PD n ops $ ANode AboveLeft s
 
 
 
@@ -185,12 +247,10 @@ instance Num a => Monoid (Draw a)where
     mempty = Draw 0 [] 0 0 NoLabel
     mappend (Draw n1 o1 d1 c1 l1) (Draw n2 o2 d2 c2 l2) = Draw n2 o1 d2 c2 l1
 
-data ProtoDraw = PD [Option] AttachNode
-
-
+data ProtoDraw = PD{idPD :: Int, optionsPD :: [Option], lPD :: AttachNode}deriving(Show)
 
 fromPD :: Num a => ProtoDraw -> Draw a
-fromPD (PD os an) = Draw 0 os 0 0 an
+fromPD (PD n os an) = Draw n os 0 0 an
 
 actDraw :: Num a => ProtoDraw -> Draw a -> Draw a
 actDraw pd d = fromPD pd `mappend` d
