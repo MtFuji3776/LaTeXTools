@@ -74,10 +74,17 @@ class Action k v where
 class MainKey a where
     itsKey :: a -> Int
 
-constNodes :: Graph Double -> [Node]
-constNodes = let setName n (Node n' x y l) = Node n x y l
-                 coor (x,y) = Node 0 x y ""
+consNodes :: Graph Double -> [Node]
+consNodes = let setName n (Node n' x y l) = Node n x y l
+                coor (x,y) = Node 0 x y ""
              in zipWith setName [1..] . map coor . snd . destruct
+
+setNodeLabel :: [Node] -> [String] -> [Node]
+setNodeLabel = let setNLabel (Node n x y l') l = Node n x y l
+               in zipWith setNLabel
+
+setNodes :: [String] -> Graph Double -> [Node]
+setNodes ls = flip setNodeLabel ls . consNodes
 
 instance Action ProtoNode Node where
     (PN x y l) <+> (Node n z w m) = Node n x y l
