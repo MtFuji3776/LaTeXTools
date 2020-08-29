@@ -3,15 +3,19 @@ module DiagramLang where
 import Graph
 import TikZ
 
-data Symbols a = Product a [a]
-               | Equalize a [a]
-               | Pullback a [a]
-               | CoProduct a [a]
-               | CoEqualizer a [a]
-               | Pushout a [a]
-               | Reticle a deriving(Show)
+data Form = Product  
+          | Equalize  
+          | Pullback  
+          | CoProduct  
+          | CoEqualizer  
+          | Pushout  
+          | Reticle deriving(Show)
 
-gravitypoint vs = 
+data Symbol = Sym Form Int (Graph Int) deriving(Show)
+
+
+
+
 
 data Quantifier = EmptyQ | Forall | Exists | ExistsOnly deriving(Eq)
 
@@ -21,10 +25,13 @@ instance Show Quantifier where
     show Exists = "$\\exists$"
     show ExistsOnly = "$\\exists !$"
 
-data Vertical = Eps | Vertical Double Double Quantifier
+data Vertical = NoVertical | Vertical Double Double Quantifier
 
+-- Draw a型のShowインスタンスを真面目に作ることでここら辺はDraw aに依存できる。
+-- これまでに作ったDraw a型は、Draw構文のうちto文法に属するものと解釈できる。TikZマニュアルでDrawの文法をちゃんと分析して、各文法に対応したデータ型を作るとここら辺もスッキリするはず。
+-- 基本となるDraw型をしっかり作ることで、Morph型もVertical型などDrawを主体に使うデータは全てDraw a型に帰着させられるはずだ。
 instance Show Vertical where
-    show Eps = ""
+    show NoVertical = ""
     show (Vertical y1 y2 q) = "&\n\\draw[-Butt Cap] (0," ++ show (y1 - 0.2)
                                                          ++ ") to (0,"
                                                          ++ show (y2 + 0.2)
@@ -82,6 +89,14 @@ data ArrowOptions = ArrOpt{idD :: Int,
 data DiagramLang = DiaLan{vert :: Vertical,
                           objs :: [Node],
                           arrs :: [Draw Int],
-                          symbs :: [Symbols Int],
-                          arrOpts :: [ArrowOptions]}deriving(Show)
+                          symbs :: [Symbol],
+                          arrOpts :: [ArrowOptions]}
+
+newline = "\n"
+
+-- display :: (Foldable t,Show a) => t a -> String
+-- display = foldr (\x ys-> show x ++ ys) ""
+
+instance Show DiagramLang where
+    show d = show (vert d) ++ newline ++ display (objs d) ++  display (arrs d) ++ show (symbs d) ++ newline ++ show (arrOpts d)
 

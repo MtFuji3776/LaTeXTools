@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 module TikZ where
 
 import qualified Data.Map as Map
@@ -31,9 +32,7 @@ instance Floating f =>  Num (TwoDimVector f) where
 --     (+|) = (+)
 --     (*|) k v = fromField k * v 
 
--- スカラー作用
-(*|) :: Double -> Vector -> Vector
-(*|) k v = (V k k) * v
+(*|) k v = V k k * v
 
 -- 法線ベクトル
 normalVector :: Vector -> Vector
@@ -58,6 +57,7 @@ vectorToDraw v1 v2 = Draw 0 [] v1 v2 NoLabel
 data Node = Node {name :: Int, xCoor :: Double, yCoor :: Double , nodeLabel :: String} deriving(Eq)
 
 instance Ord Node where
+    n1 < n2 = name n1 < name n2
     n1 <= n2 = name n1 <= name n2
 
 instance Show Node where
@@ -65,6 +65,22 @@ instance Show Node where
 
 
 data ProtoNode = PN Double Double String deriving(Show)
+
+-- 単位付き左作用型クラス。これを用いて、グラフが生成したNodeに対して最小限の入力で初期化する。
+-- と思ったらなんか左単位元作れないっぽい。両方の型引数を使った演算子か認めないのか？
+class Action k v where 
+    (<+>)   :: k -> v -> v
+
+class MainKey a where
+    itsKey :: a -> Int
+
+constNodes :: Graph Double -> [Node]
+constNodes = let setName n (Node n' x y l) = Node n x y l
+                 coor (x,y) = Node 0 x y ""
+             in zipWith setName [1..] . map coor . snd . destruct
+
+instance Action ProtoNode Node where
+    (PN x y l) <+> (Node n z w m) = Node n x y l
 
 fromPN :: ProtoNode -> Node
 fromPN (PN x y l) = Node 0 x y l
@@ -83,11 +99,14 @@ setNode x y l = setLabelN l . setCoor x y
 
 instance Num Node where
     fromInteger n = let m = fromInteger n in Node m 0 0 ""
-    (Node n1 x y l) + (Node n2 z w l') = Node n2 (x+z) (y+w) l
+    (Node n1 x y l) + (Node n2 z w l') = Node n2 (x+0) (y+0) l
     (Node n1 x y l) * (Node n2 z w l') = Node n2 (x*z) (y*w) l
     abs (Node n x y l) = Node n (sqrt $ x*x + y*y) 0 l
     negate (Node n x y l) = Node n (-x) (-y) l
     signum (Node n x y l) = Node n (signum x) (signum y) l
+
+instance MainKey Node where
+    itsKey = name
 
 instance Monoid Node where
     mempty = Node 0 0 0 ""
@@ -133,14 +152,26 @@ nodedrawWithKey = cross (map nameAndNode) (map idAndDraw)
 nodedrawMaps :: ([(Int,Node)],[(Int,Draw a)]) -> (Map.Map Int Node,Map.Map Int (Draw a))
 nodedrawMaps = cross Map.fromList Map.fromList
 
+newtype NodeDraws = ND{unND :: (NodeMap,DrawMap Int)} deriving(Show)
+
 -- グラフデータから連想配列の組まで一気に変換する関数
-constractMaps :: Graph Int -> (Map.Map Int Node,Map.Map Int (Draw Int)) 
-constractMaps = nodedrawMaps . nodedrawWithKey . nodedraws . destruct
+generateNodeDraws :: Graph Int -> NodeDraws
+generateNodeDraws = ND . nodedrawMaps . nodedrawWithKey . nodedraws . destruct
+
+appendToMap :: (Num a, MainKey a) => [a] -> Map.Map Int a -> Map.Map Int a
+appendToMap xs m = foldr (\x ys -> let z = head xs; n = itsKey z in Map.adjust (z+) n ys) m xs
+
+mkMap :: MainKey a => [a] -> Map.Map Int a
+mkMap xs = Map.fromList $ zip (map itsKey xs) xs
+
+-- instance Action [a] NodeDraws where
+--     ns <+> ms = let mapNode = fst (unND ms); draws = snd (unND ms) in ND (appendToMap ns mapNode, draws)
 
 -- Nodeの初期値リストを渡すと、連想配列のそれを更新する関数
 appendNodes :: [Node] -> Map.Map Int Node -> Map.Map Int Node
-appendNodes []        = id
-appendNodes (n:ns)    = appendNodes ns . Map.adjust (n+) (name n)
+appendNodes = appendToMap
+-- appendNodes []        = id
+-- appendNodes (n:ns)    = appendNodes ns . Map.adjust (n+) (name n)
 
 appendProtoDraws :: Num a => [ProtoDraw] -> DrawMap a -> DrawMap a
 appendProtoDraws []     = id
@@ -158,6 +189,9 @@ arrangeDraws pds = cross id (appendProtoDraws pds)
 
 arrangeNodeDraws :: Num a => [Node] -> [ProtoDraw] -> NodeDrawMaps a -> NodeDrawMaps a
 arrangeNodeDraws ns pds = cross (appendNodes ns) (appendProtoDraws pds)
+
+display :: (Foldable t,Show a) => t a -> String
+display = foldr (\x ys-> show x ++ ys) ""
 
 -- Name = Intで紐付けされた関数をNodeに適用するための高階関数
 evalByName :: (Int -> Node -> t) -> Node -> t
@@ -243,11 +277,20 @@ instance Show a => Show (Draw a) where
 instance Functor Draw where
     fmap f (Draw n os d c l) = Draw n os (f d) (f c) l
 
+instance MainKey (Draw a) where
+    itsKey = idDraw
+
+instance MainKey ProtoDraw where
+    itsKey = idPD
+
 instance Num a => Monoid (Draw a)where
     mempty = Draw 0 [] 0 0 NoLabel
     mappend (Draw n1 o1 d1 c1 l1) (Draw n2 o2 d2 c2 l2) = Draw n2 o1 d2 c2 l1
 
 data ProtoDraw = PD{idPD :: Int, optionsPD :: [Option], lPD :: AttachNode}deriving(Show)
+
+instance Num a => Action ProtoDraw (Draw a) where
+    PD n os lpd <+> Draw m ps d c l' = Draw m os d c lpd
 
 fromPD :: Num a => ProtoDraw -> Draw a
 fromPD (PD n os an) = Draw n os 0 0 an

@@ -17,7 +17,10 @@ instance Num a => Num (Graph a) where
     (*)         = Connect
     signum      = const Empty
     abs         = id
-    negate      = id
+    negate    g = case g of Empty -> Empty
+                            Vertex n -> Vertex (negate n);
+                            Overlay g1 g2 -> Overlay (negate g1) (negate g2);
+                            Connect g1 g2 -> Connect (negate g1) (negate g2);
 
 instance Show a => Show (Graph a) where
     show Empty = "()"
@@ -87,14 +90,16 @@ destruct g = (toList . getVertices $ g,sort . getEdges $ g)
 -- 一回で済ませる方法は一応ある。蓄積引数法またはStateモナドを使うのだ。それでタプルを状態に持ち、第一成分ではgetVerticesの関数を、第二成分ではgetEdgesを計算させる。
 -- このやり方なら、引数としてgを一つ受け取ればよく、現状のdeconstractのようにgの再帰構造を二回壊すよりも半分の時間で済むはずだ。
 
--- uncurry graph . deconstract = id
--- deconstract . uncurry graph = id
+-- uncurry graph . destruct = id
+-- destruct . uncurry graph . destruct = destruct
 -- が成立。コンストラクタとデストラクタで同型。
 
 path :: [a] -> Graph a
 path [] = Empty
 path [x] = Vertex x
 path xs = let ys = map Vertex xs in foldr Overlay Empty $ zipWith Connect ys $ tail ys
+
+
 
 
 data Rose a = Rose{nodeR :: a, childrenR :: [Rose a]}
