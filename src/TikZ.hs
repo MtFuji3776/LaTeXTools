@@ -275,11 +275,17 @@ instance Show Place where
 (PD n ops l) /| s = PD n ops $ ANode AboveLeft s
 
 
+class Show a => Render a where
+    render :: a -> String
 
 data Draw a = Draw{idDraw :: Int, options :: [Option], dom :: a, cod :: a, l :: AttachNode}
 
 instance Show a => Show (Draw a) where
     show (Draw i o d c dr) = show i ++ ":\\draw" ++ show o ++ " (" ++ show d ++ ") to " ++ show dr ++  " (" ++ show c ++ ");\n"
+
+instance Show a => Render (Draw a) where
+    render (Draw i o d c dr) = let roundbraces x = "(" ++ show x ++ ")"
+                               in "\\draw" ++ show o ++ " " ++ roundbraces d ++ " to " ++ show dr ++ roundbraces c ++ ";\n"
 
 instance Functor Draw where
     fmap f (Draw n os d c l) = Draw n os (f d) (f c) l
