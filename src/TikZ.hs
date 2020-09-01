@@ -3,6 +3,7 @@ module TikZ where
 
 import qualified Data.Map as Map
 import Graph
+import Data.Semigroup(Semigroup)
 
 -- 座標計算用にベクトル型を定義しておく。データ構造のData.Vectorと違い数値計算に特化させる。
 -- 事によると、Vector単体でモジュールを作っても良いかもしれない。
@@ -89,20 +90,20 @@ setNodes ls = flip setNodeLabel ls . consNodes
 instance Action ProtoNode Node where
     (PN x y l) <+> (Node n z w m) = Node n x y l
 
-fromPN :: ProtoNode -> Node
-fromPN (PN x y l) = Node 0 x y l
+-- fromPN :: ProtoNode -> Node
+-- fromPN (PN x y l) = Node 0 x y l
 
-actNode :: ProtoNode -> Node -> Node
-actNode pn n = fromPN pn + n
+-- actNode :: ProtoNode -> Node -> Node
+-- actNode pn n = fromPN pn + n
 
-setCoor :: Double -> Double -> Node -> Node
-setCoor x y (Node n z w l) = Node n x y l
+-- setCoor :: Double -> Double -> Node -> Node
+-- setCoor x y (Node n z w l) = Node n x y l
 
-setLabelN :: String -> Node -> Node
-setLabelN l (Node n x y l') = Node n x y l
+-- setLabelN :: String -> Node -> Node
+-- setLabelN l (Node n x y l') = Node n x y l
 
-setNode :: Double -> Double -> String -> Node -> Node
-setNode x y l = setLabelN l . setCoor x y
+-- setNode :: Double -> Double -> String -> Node -> Node
+-- setNode x y l = setLabelN l . setCoor x y
 
 instance Num Node where
     fromInteger n = let m = fromInteger n in Node m 0 0 ""
@@ -115,9 +116,12 @@ instance Num Node where
 instance MainKey Node where
     itsKey = name
 
+-- instance Semigroup Node where
+--     mappend = (+)
+
 instance Monoid Node where
     mempty = Node 0 0 0 ""
-    mappend n1 n2 = n1 + n2
+    mappend = (+)
 
 fromVector :: Vector -> Node
 fromVector (V x y) = Node 0 x y ""
