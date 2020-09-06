@@ -1,11 +1,14 @@
+{-# LANGUAGE TemplateHaskell #-}
 module DiagramLang where
 
 import Graph
 import TikZ
+import Control.Lens
 
-data Form = Product  
-          | Equalize  
-          | Pullback  
+type IDDraw = Int
+data Form = Product IDDraw IDDraw
+          | Equalize  IDDraw
+          | Pullback  IDDraw IDDraw
           | CoProduct  
           | CoEqualizer  
           | Pushout  
@@ -66,10 +69,15 @@ instance Show Vertical where
 -- (/\) :: Draw a -> Label -> Draw a
 -- (Draw n ops d c )
 
+-- Drawよりも図式言語に特化させた前駆体型
+data Morphism a = Mor{_idMor :: Int
+                     ,_arropts :: [ArrowOption]
+                     , _domain :: a 
+                     , _codomain :: a
+                     , _labMor :: AttachNode}deriving(Show) --Showインスタンスはあとでもうちょっと考える
+
 data ArrowOption = Monic | Epic | Cover | Equalizer | XShift Double | YShift Double | XYShift Double Double | ButtCap | Stealth | Custom String 
 
--- TikZのdrawのオプションで矢印に関するものを研究し、TikZのOptionをデータ型で構成できたときには、
--- そちらに準拠したShowインスタンスにリファクタリングする予定。
 instance Show ArrowOption where
     show Monic = "|-stealth"
     show Cover = "-{Stealth[open]}"
@@ -82,15 +90,27 @@ instance Show ArrowOption where
     show Stealth = "-stealth"
     show (Custom xs) = xs
 
-data ArrowOptions = ArrOpt{idD :: Int,
-                           opts :: [ArrowOption],
-                           attachLabel :: AttachNode}deriving(Show)
+instance Show a => Render (Morphism a) where
+    render (Mor i os d c l) = let o = foldr (\x ys -> if ys == [] then show x else show x ++ "," ++ ys) mempty os
+                              in "\\draw[" ++  o ++ "] " ++ show d ++ " to " ++ show l ++ show c ++ ";"
 
-data DiagramLang = DiaLan{vert :: Vertical,
-                          objs :: [Node],
-                          arrs :: [Draw Int],
-                          symbs :: [Symbol],
-                          arrOpts :: [ArrowOptions]}
+
+$(makeLenses ''Morphism)
+
+
+-- TikZのdrawのオプションで矢印に関するものを研究し、TikZのOptionをデータ型で構成できたときには、
+-- そちらに準拠したShowインスタンスにリファクタリングする予定。
+
+data ArrowOptions = ArrOpt{_idD :: Int,
+                           _opts :: [ArrowOption],
+                           _attachLabel :: AttachNode}deriving(Show)
+
+data DiagramLang = DiaLan{_vert :: Vertical,
+                          _objs :: [Node],
+                          _arrs :: [Draw Int],
+                          _symbs :: [Symbol],
+                          _arrOpts :: [ArrowOptions]}
+
 
 newline = "\n"
 
@@ -98,5 +118,8 @@ newline = "\n"
 -- display = foldr (\x ys-> show x ++ ys) ""
 
 instance Show DiagramLang where
-    show d = show (vert d) ++ newline ++ display (objs d) ++  display (arrs d) ++ show (symbs d) ++ newline ++ show (arrOpts d)
+    show d = show (_vert d) ++ newline ++ display (_objs d) ++  display (_arrs d) ++ show (_symbs d) ++ newline ++ show (_arrOpts d)
 
+
+$(makeLenses ''ArrowOptions)
+$(makeLenses ''DiagramLang)

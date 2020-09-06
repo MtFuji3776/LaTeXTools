@@ -208,7 +208,7 @@ display = foldr (\x ys-> show x ++ ys) ""
 evalByName :: (Int -> Node -> t) -> Node -> t
 evalByName f n = let m = name n in f m n
 
-data Option = Moni deriving(Show)-- | Epic | Cover | Equalizer | XShift Double | YShift Double | XYShift Double Double | ButtCap | Stealth | Custom String 
+--data Option = Moni deriving(Show)-- | Epic | Cover | Equalizer | XShift Double | YShift Double | XYShift Double Double | ButtCap | Stealth | Custom String 
 
 -- instance Show Option where
 --     show Monic = "|-stealth"
@@ -282,6 +282,7 @@ instance Show Place where
 class Show a => Render a where
     render :: a -> String
 
+type Option = String
 data Draw a = Draw{idDraw :: Int, options :: [Option], dom :: a, cod :: a, l :: AttachNode}
 
 instance Show a => Show (Draw a) where
