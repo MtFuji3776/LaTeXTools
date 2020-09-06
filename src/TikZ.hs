@@ -350,8 +350,8 @@ evalByID :: (Int -> Draw a -> t) -> Draw a -> t
 evalByID f d = let m = idDraw d in f m d
 
 
-view :: Show a => [a] -> IO ()
-view = putStrLn . concatMap show
+viewData :: Show a => [a] -> IO ()
+viewData = putStrLn . concatMap show
 
 -- mkDraws :: Graph Int -> [Draw] --Partial Function
 -- mkDraws g = let xs = getEdges g in zipWith planeDraw xs [1,2..]
