@@ -39,7 +39,17 @@ separate m n v1 v2 = let k = 1 / (m+n) in (k*n) *: v1 + (k*m) *: v2
 relvector :: Vector -> Vector -> Vector -- 第二引数を始点とした相対ベクトル
 relvector v1 v2 = v1 - v2
 
-protprod :: Vector -> Vector -> Vector -> (Vector,Vector) -- Product,Pullback記号導出のための座標計算の下準備
-protprod v v1 v2 = let p x = 0.25 *: relvector x v
-                   in  over _1 p . over _2 p $ (v1,v2)
-                
+protprod :: Vector -> Vector -> Vector -> Double -> (Vector,Vector) -- Product,Pullback記号導出のための座標計算の下準備
+protprod v v1 v2 k = let p x = k *: relvector x v        -- 第一引数が始点、それ以降が終点を表すベクトル
+                   in  over _1 p . over _2 p $ (v1,v2)    -- 相対ベクトルを計算し、1/4サイズにして返す
+
+pullback :: Vector -> Vector -> Vector -> [Vector] -- 引き戻し記号でPathが辿るべき頂点座標を、位置ベクトルのリストで返す関数
+pullback v v1 v2 = let (v1',v2') = protprod v v1 v2 0.25 -- 記号の基点をprotprodで計算
+                       vs = [v1',v1' + v2',v2'] -- v1' + v2'が中継点。Pullback固有でProductと違うところ
+                   in map (+v) vs -- 相対ベクトルの補正を修正
+
+product :: Vector -> Vector -> Vector -> [(Vector,Vector)]
+product v v1 v2 = let (v1',v2') = protprod v v1 v2 0.25 -- 記号の始点
+                      (v1'',v2'') = protprod v v1 v2 0.5 -- Pathの終点はPullbackと異なる方法で用意する
+                      vs = [(v1',v1' + v2''),(v2' + v1'' ,v2')] -- Product記号の描画。これはPathではなくDrawで描くべし。
+                  in map (over _1 (+v).over _2 (+v)) vs
