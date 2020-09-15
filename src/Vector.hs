@@ -1,6 +1,8 @@
+{-# LANGUAGE TemplateHaskell,OverloadedLists #-}
 module Vector where
 
-import Control.Lens(_1,_2,over)
+import Control.Lens(lens,_1,_2,over,Lens',makeLenses)
+import qualified Data.Vector as V
 
 data Vector = V{xcoor :: Double,ycoor :: Double}
 
@@ -53,3 +55,37 @@ product v v1 v2 = let (v1',v2') = protprod v v1 v2 0.25 -- 記号の始点
                       (v1'',v2'') = protprod v v1 v2 0.5 -- Pathの終点はPullbackと異なる方法で用意する
                       vs = [(v1',v1' + v2''),(v2' + v1'' ,v2')] -- Product記号の描画。これはPathではなくDrawで描くべし。
                   in map (over _1 (+v).over _2 (+v)) vs
+
+
+
+
+-- グラフの力学的レイアウト導出アルゴリズム
+data Vertex = Ver {_idVer :: Int,_position :: Vector , _disposition :: Vector } deriving(Show)
+
+-- 頂点用レンズ
+-- idVer = lens _idVer (\vx i -> vx{_idVer = i}) :: Lens' Vertex Int
+-- position = lens _position (\vx pos -> vx{_position = pos}) :: Lens' Vertex Vector
+-- disposition = lens _disposition (\vx disp -> vx{_disposition = disp}) :: Lens' Vertex Vector
+$(makeLenses ''Vertex)
+
+k w h vs = let n = fromIntegral $ length vs in sqrt $ w * h / n
+
+repulsive (Ver n1 p1 d1) (Ver n2 p2 d2) k = if n1 == n2 then V 0 0 else
+                    let delta = p2 - p1
+                        z = xcoor . abs $ delta
+                        force = k*k / z -- kを定めていないことを忘れるべからず。Frameデータ型を定義したら引数にFrameを持たせるか？ 
+                    in (force / z) *: delta
+
+f_a d k = d*d/k
+
+attractive :: (Int,Int) -> V.Vector Vertex -> Double -> V.Vector Vertex
+attractive (i,j) vs k = if i == j then vs else
+            let vi = vs V.! i
+                vj = vs V.! j
+                delta = _position vi - _position vj
+                distance = xcoor . abs $ delta
+                force = f_a distance k
+                disp_i = _disposition vi - (force / distance) *: delta
+                disp_j = _disposition vj + (force / distance) *: delta
+            in V.accum (\x y -> over disposition (y+) x) vs [(i,disp_i), (j,disp_j)]
+
