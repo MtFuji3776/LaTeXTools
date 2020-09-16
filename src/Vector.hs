@@ -3,6 +3,7 @@ module Vector where
 
 import Control.Lens(lens,_1,_2,over,Lens',makeLenses)
 import qualified Data.Vector as V
+import System.Random
 
 data Vector = V{xcoor :: Double,ycoor :: Double}
 
@@ -68,6 +69,9 @@ data Vertex = Ver {_idVer :: Int,_position :: Vector , _disposition :: Vector } 
 -- disposition = lens _disposition (\vx disp -> vx{_disposition = disp}) :: Lens' Vertex Vector
 $(makeLenses ''Vertex)
 
+-- 射のcross積
+cross f g = over _1 f . over _2 g
+
 k w h vs = let n = fromIntegral $ length vs in sqrt $ w * h / n
 
 repulsive (Ver n1 p1 d1) (Ver n2 p2 d2) k = if n1 == n2 then V 0 0 else
@@ -88,4 +92,32 @@ attractive (i,j) vs k = if i == j then vs else
                 disp_i = _disposition vi - (force / distance) *: delta
                 disp_j = _disposition vj + (force / distance) *: delta
             in V.accum (\x y -> over disposition (y+) x) vs [(i,disp_i), (j,disp_j)]
+
+-- 1~wのランダム選択する関数。引数wで分母の数を決める。wが100ならば1/100 , 2/100 , ... , 100/100の中からランダム選択される。
+uniform0_n :: (Random a, Num a) => a -> IO a
+uniform0_n w = getStdRandom (randomR (1,w)) 
+
+-- 1~10億の中からランダム選択。
+uniform0_billion :: IO Int
+uniform0_billion = uniform0_n 1000000000
+
+-- 区間[0,1]上の有理数集合のうち{n/1000000000 | n <- [0..1000000000]}からランダム選択。
+uniform0_1 :: (Fractional b1,Fractional b2) => IO (b1,b2)
+uniform0_1 = do
+    d1 <- uniform0_billion
+    d2 <- uniform0_billion
+    let d1' = fromIntegral d1 / 1000000000
+        d2' = fromIntegral d2 / 1000000000
+    return (d1' , d2')
+
+
+-- 閉領域[0,1]×[0,1]からn組の点をランダム選択する関数
+mkRandomCoor ::  Int -> IO [(Double,Double)]
+mkRandomCoor n = mapM id (replicate n uniform0_1) 
+
+-- フレームの横幅wと縦幅hを渡すと、閉領域[0,w]×[0,h]からn点ランダム選択する関数。実際に使うのはこれでよかろう。
+mkInitCoor :: Double -> Double -> Int -> IO [(Double , Double)]
+mkInitCoor w h n = do
+    ts <- mkRandomCoor n
+    return $ map (cross (*w) (*h)) ts
 

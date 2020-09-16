@@ -29,6 +29,7 @@ dependencies:
 - lens
 - directory
 - turtle
+- random
 
 library:
   source-dirs: src
