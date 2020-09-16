@@ -4,6 +4,7 @@ module DiagramLang where
 import Graph
 import TikZ
 import Control.Lens
+import Vector
 
 type IDDraw = Int
 data Form = Product IDDraw IDDraw
