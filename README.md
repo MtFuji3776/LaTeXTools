@@ -1,1 +1,1 @@
-# Haskell Combinator for LaTeX generator, especially for TikZ and bussproofs for now.
+# Haskell Combinators for generating LaTeX, especially for TikZ and bussproofs for now.
