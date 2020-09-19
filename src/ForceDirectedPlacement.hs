@@ -94,7 +94,7 @@ initFrame w h t g = do
 repulsive__ :: Vertex -> Vertex -> Double -> Vector
 repulsive__ (Ver n1 p1 d1) (Ver n2 p2 d2) k = if n1 == n2 then V 0 0 else
                     let delta = p2 - p1
-                        z = xcoor . abs $ delta
+                        z = norm delta
                         force = k*k / z -- kを定めていないことを忘れるべからず。Frameデータ型を定義したら引数にFrameを持たせるか？ 
                     in (force / z) *: delta
 
@@ -144,9 +144,9 @@ attractive frame =
 -- 
 temperatureAction__ :: Double -> Double -> Double -> Vertex -> Vertex
 temperatureAction__ w h t v = 
-    let disp = view disposition v -- Vertexの変位ベクトル
-        disp_norm = norm disp   -- 変位ベクトルの大きさ
-        protonewpos = view position v + (min disp_norm t) *: disp    -- フレーム壁がなかった場合の頂点の移動先。このあと壁の影響を加味する
+    let vxy = view disposition v -- Vertexの変位ベクトル
+        vxy_norm = norm disp   -- 変位ベクトルの大きさ
+        protonewpos = view position v + (min vxy_norm t) *: vxy    -- フレーム壁がなかった場合の頂点の移動先。このあと壁の影響を加味する
         mknewpos_ l d = min (l/2) . max (-l / 2) $ d    -- 壁にぶつかった頂点はそこで停止する仕様
         newPos_x = mknewpos_ w (xcoor protonewpos)  -- vの座標ベクトルのx座標。変位による移動先か、またはフレームの内壁で止まっている
         newPos_y = mknewpos_ h (ycoor protonewpos)  -- vの座標ベクトルのy座標も同様。
