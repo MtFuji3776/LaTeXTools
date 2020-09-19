@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+module Pullback where
+
 import Syntax
 import Text.LaTeX.Base
 import Text.LaTeX.Base.Class
@@ -58,7 +60,7 @@ catWhichHavePullBack = do
     v Exists'
     d4
 
-plbsign (x1,y1) (x2,y2) (x3,y3) = 
+
 
 q1_1 :: Writer Diagram ()
 q1_1 = do
@@ -68,8 +70,8 @@ q1_1 = do
     tell $ node "z" 2 0 Nothing
     tell $ draw Emp ("x" --> "z" $ "") $ OptNode "below" "f"
     tell $ draw Emp ("y" --> "z" $ "") $ OptNode "right" "g"
-    tell $ draw Emp ("p" --> "x" $ "") OptNode "left" "l"
-    tell $ draw Emp ("p" --> "y" $ "") OptNode "above" "r"
+    tell $ draw Emp ("p" --> "x" $ "") $ OptNode "left" "l"
+    tell $ draw Emp ("p" --> "y" $ "") $ OptNode "above" "r"
 
 q1_2 :: Writer Diagram ()
 q1_2 = do
@@ -77,9 +79,9 @@ q1_2 = do
     tell $ node "p" 2 2 $ Just "P"
     tell $ node "x" 0 0 Nothing
     tell $ node "y" 4 0 Nothing
-    tell $ draw Emp ("p" -> "x" $ "") $ OptNode "left" "l"
-    tell $ draw Emp ("p" -> "y" $ "") $ OptNode "right" "r"
-    tell $ draw Emp ("w" -> "x" $ "") $ OptNode "left" "x_1"
-    tell $ draw Emp ("w" -> "y" $ "") $ OptNode "right" "x_2"
-    tell $ draw Emp ("w" -> "p" $ "") $ OptNode "left" "\phi_1"
-    tell $ draw Emp ("w" -> "p" $ "") $ OptNode "right" "\phi_2"
+    tell $ draw Emp ("p" --> "x" $ "") $ OptNode "left" "l"
+    tell $ draw Emp ("p" --> "y" $ "") $ OptNode "right" "r"
+    tell $ draw Emp ("w" --> "x" $ "") $ OptNode "left" "x_1"
+    tell $ draw Emp ("w" --> "y" $ "") $ OptNode "right" "x_2"
+    tell $ draw Emp ("w" --> "p" $ "") $ OptNode "left" "\\phi_1"
+    tell $ draw Emp ("w" --> "p" $ "") $ OptNode "right" "\\phi_2"

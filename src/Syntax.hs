@@ -161,7 +161,7 @@ env1 :: String -> LaTeX -> LaTeX
 env1 name content = fromLaTeX $ TeXEnv name [] content
 
 env_diagram :: LaTeX -> LaTeX
-env_diagram x =  env1 "center" $ TeXEnv "tikzpicture" [MOptArg ["-Stealth"]] $ between x "\n" "\n"
+env_diagram x =  Syntax.env1 "center" $ TeXEnv "tikzpicture" [MOptArg ["-Stealth"]] $ between x "\n" "\n"
 
 
 class (Monoid d,IsString d) => DiagramC d where

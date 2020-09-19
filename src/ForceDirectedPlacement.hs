@@ -6,6 +6,7 @@ import qualified Data.Vector as V
 import Control.Lens
 import System.Random
 import qualified Graph as G
+import qualified Graphics.Gloss as Gloss
 
 -- グラフの力学的レイアウト導出アルゴリズム
 data Vertex = Ver {_idVer :: Int,_position :: Vector , _disposition :: Vector } deriving(Show)
@@ -125,9 +126,9 @@ attractive_ vs k (i,j) = if i == j then vs else
                 delta = _position vi - _position vj
                 distance = xcoor . abs $ delta
                 force = f_a distance k
-                disp_i = _disposition vi - (force / distance) *: delta
-                disp_j = _disposition vj + (force / distance) *: delta
-            in V.accum (\x y -> over disposition (y+) x) vs [(i,disp_i), (j,disp_j)]
+                disp_i =  - (force / distance) *: delta
+                disp_j =  (force / distance) *: delta
+            in V.accum (\x y -> set disposition y x) vs [(i,disp_i), (j,disp_j)]
 
 -- 頂点間の引力を変異ベクトルに作用させる関数のラッピング版
     -- フレームを受け取り、フレームから必要な情報を取り出して引力作用を計算し、フレームを更新して返す
@@ -147,8 +148,8 @@ temperatureAction__ w h t v =
         disp_norm = norm disp   -- 変位ベクトルの大きさ
         protonewpos = view position v + (min disp_norm t) *: disp    -- フレーム壁がなかった場合の頂点の移動先。このあと壁の影響を加味する
         mknewpos_ l d = min (l/2) . max (-l / 2) $ d    -- 壁にぶつかった頂点はそこで停止する仕様
-        newPos_x = mknewpos_ (w/2) (xcoor protonewpos)  -- vの座標ベクトルのx座標。変位による移動先か、またはフレームの内壁で止まっている
-        newPos_y = mknewpos_ (h/2) (ycoor protonewpos)  -- vの座標ベクトルのy座標も同様。
+        newPos_x = mknewpos_ w (xcoor protonewpos)  -- vの座標ベクトルのx座標。変位による移動先か、またはフレームの内壁で止まっている
+        newPos_y = mknewpos_ h (ycoor protonewpos)  -- vの座標ベクトルのy座標も同様。
     in set position (V newPos_x newPos_y) v -- 頂点の座標ベクトルを更新
     
 -- 斥力、引力による速度変化がもたらす座標変化を計算したあと、フレームの温度と内壁の影響を加味して、Vertexに新しい座標を設定する関
@@ -166,3 +167,10 @@ temperatureAction frame =
     let vs = temperatureAction_ frame
     in set vertices vs frame
 
+cool :: Double -> Frame -> Frame
+cool n frame = 
+    let t = n * n / (n+1)
+    in set temperature t frame
+
+oneloop :: Frame -> Frame
+oneloop = cool 10 . temperatureAction . repulsive . attractive

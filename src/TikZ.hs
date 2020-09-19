@@ -119,9 +119,12 @@ instance MainKey Node where
 -- instance Semigroup Node where
 --     mappend = (+)
 
+instance Semigroup Node where
+    n1 <> n2 = n1 + n2
+
 instance Monoid Node where
     mempty = Node 0 0 0 ""
-    mappend = (+)
+    mappend = (<>)
 
 fromVector :: Vector -> Node
 fromVector (V x y) = Node 0 x y ""
@@ -301,9 +304,12 @@ instance MainKey (Draw a) where
 instance MainKey ProtoDraw where
     itsKey = idPD
 
+instance Num a => Semigroup (Draw a) where
+    (Draw n1 o1 d1 c1 l1) <> (Draw n2 o2 d2 c2 l2) = Draw n2 o1 d2 c2 l1
+
 instance Num a => Monoid (Draw a)where
     mempty = Draw 0 [] 0 0 NoLabel
-    mappend (Draw n1 o1 d1 c1 l1) (Draw n2 o2 d2 c2 l2) = Draw n2 o1 d2 c2 l1
+    mappend = (<>)
 
 data ProtoDraw = PD{idPD :: Int, optionsPD :: [Option], lPD :: AttachNode}deriving(Show)
 

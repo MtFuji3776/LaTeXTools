@@ -1,5 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+module Templates where
+    
+
 import Text.LaTeX.Base
 import Text.LaTeX.Base.Syntax
 import Text.LaTeX.Base.Class

@@ -1,6 +1,6 @@
-name:                HaskellTools
+name:                LaTeXTools
 version:             0.1.0.0
-github:              "githubuser/HaskellTools"
+github:              "githubuser/LaTeXTools"
 license:             BSD3
 author:              "Author name here"
 maintainer:          "example@example.com"
@@ -30,12 +30,13 @@ dependencies:
 - directory
 - turtle
 - random
+- gloss
 
 library:
   source-dirs: src
 
 executables:
-  HaskellTools-exe:
+  LaTeXTools-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -43,10 +44,12 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - HaskellTools
+    - LaTeXTools
+    - gloss
+    
 
 tests:
-  HaskellTools-test:
+  LaTeXTools-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
