@@ -8,6 +8,7 @@ import System.Random
 import qualified Graph as G
 import qualified Graphics.Gloss as Gloss
 
+
 -- グラフの力学的レイアウト導出アルゴリズム
 data Vertex = Ver {_idVer :: Int,_position :: Vector , _disposition :: Vector } deriving(Show)
 
@@ -24,7 +25,7 @@ cross f g = over _1 f . over _2 g
 
 -- フレームの形状とグラフの頂点数から決定する定数
 k_Cons :: Double -> Double -> [a] -> Double
-k_Cons w h vs = let n = fromIntegral $ length vs in sqrt $ w * h / n
+k_Cons w h vs = let n = fromIntegral $ length vs in  0.7 * sqrt  (w * h / n)
 
 
 -- 1~wのランダム選択する関数。引数wで分母の数を決める。wが100ならば1/100 , 2/100 , ... , 100/100の中からランダム選択される。
@@ -117,7 +118,7 @@ repulsive frame =
 
 
 
-f_a d k = d*d/k
+f_a d k = 0.9*d*d/k
 
 attractive_ :: V.Vector Vertex -> Double -> (Int,Int) -> V.Vector Vertex
 attractive_ vs k (i,j) = if i == j then vs else
@@ -145,8 +146,8 @@ attractive frame =
 temperatureAction__ :: Double -> Double -> Double -> Vertex -> Vertex
 temperatureAction__ w h t v = 
     let vxy = view disposition v -- Vertexの変位ベクトル
-        vxy_norm = norm disp   -- 変位ベクトルの大きさ
-        protonewpos = view position v + (min vxy_norm t) *: vxy    -- フレーム壁がなかった場合の頂点の移動先。このあと壁の影響を加味する
+        vxy_norm = norm vxy   -- 変位ベクトルの大きさ
+        protonewpos = view position v + (min vxy_norm t / vxy_norm) *: vxy    -- フレーム壁がなかった場合の頂点の移動先。このあと壁の影響を加味する
         mknewpos_ l d = min (l/2) . max (-l / 2) $ d    -- 壁にぶつかった頂点はそこで停止する仕様
         newPos_x = mknewpos_ w (xcoor protonewpos)  -- vの座標ベクトルのx座標。変位による移動先か、またはフレームの内壁で止まっている
         newPos_y = mknewpos_ h (ycoor protonewpos)  -- vの座標ベクトルのy座標も同様。
@@ -167,10 +168,12 @@ temperatureAction frame =
     let vs = temperatureAction_ frame
     in set vertices vs frame
 
-cool :: Double -> Frame -> Frame
-cool n frame = 
-    let t = n * n / (n+1)
+cool :: Float -> Float -> Frame -> Frame
+cool ti tn frame = 
+    let t = fromRational . toRational $ ti  /  1.1^(floor tn)
     in set temperature t frame
 
-oneloop :: Frame -> Frame
-oneloop = cool 10 . temperatureAction . repulsive . attractive
+oneloop :: Float -> Frame -> Frame
+oneloop t = cool 80 t . temperatureAction . repulsive . attractive 
+
+ 
