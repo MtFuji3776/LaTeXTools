@@ -171,10 +171,10 @@ temperatureAction frame =
 
 cool :: Float -> Float -> Frame -> Frame
 cool ti tn frame = 
-    let t = fromRational . toRational $  ti  /  tn
+    let t = fromRational . toRational $  ti  /  sqrt tn
     in set temperature t frame
 
 oneloop :: Float -> Frame -> Frame
-oneloop t = cool 100 t . temperatureAction . repulsive . attractive 
+oneloop t = cool 900 t . temperatureAction . repulsive . attractive 
 
  

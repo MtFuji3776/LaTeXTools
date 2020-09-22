@@ -93,6 +93,15 @@ mkedgePaths frame =
         pathvecs = fmap (\t -> let i1 = fst t; i2 = snd t; vex1 = vs Vec.! i1; vex2 = vs Vec.! i2 in map (view position) [vex1,vex2]) es -- 辺タプルの値をインデックスにしてvsからVertex値を取得し、そのposition成分を取り出す関数のmap
     in  map (map (cross doubleTofloat doubleTofloat . toTuple)) $ Vec.toList pathvecs    -- VectorリストをDoubleタプルリストに変換、さらにDoubleをFloatに変換
 
+drawVertex :: Frame -> Picture
+drawVertex frame = 
+  let vs = view vertices frame
+      doubleTofloat = fromRational . toRational :: Double -> Float
+      coors = fmap (cross doubleTofloat doubleTofloat . toTuple . view position) vs -- ここはtraverseを使えば一息にframeから作れるのではないか
+      drawcircle (x,y) = translate x y $ circleSolid 7
+      circles = fmap drawcircle coors
+  in pictures . Vec.toList $ circles
+
 foldn :: (a -> a) -> a -> Int -> a
 foldn f e 0 = e
 foldn f e n = foldn f (f e) (n-1)
@@ -104,6 +113,8 @@ main :: IO ()
 --main = play window white 24 initialBox drawBox updateBox nextBox
 --main = foldn (>>= return . (oneloop  40)) (initFrame 100 100 10 (1*(2+3) + (2+3)*4 + 5 * (1+2+3))) 1000 >>= \f -> display FullScreen white $ translate (-150) (-10) . scale 10 10 $  mconcat . map line $ mkedgePaths f
 main = do
-    f1 <- initFrame 1000 1000 40 $ 1*2*3*4*5*6*7
+    f1 <- initFrame 10000 10000 40 $ 1*2*3*4*5*6*7*8
     print f1
-    simulate FullScreen white 60 f1 (scale 10 10 . mconcat . map line . mkedgePaths) (\_ -> oneloop)
+    let framebox = scale 10 10 . color blue $ pictures $ map (line) $ [[(-5000,-5000),(-5000,5000)] ,[(-5000,5000),(5000,5000)] , [(5000,5000),(5000,-5000)], [(5000,-5000),(-5000,-5000)]]
+    simulate FullScreen white 60 f1 (\model -> framebox <> (scale 10 10 . drawVertex $ model) <> (scale 10 10 . mconcat . map line . mkedgePaths $ model) ) (\_ -> oneloop) -- Picture値関数はlet束縛で定義した方が良さげ
+--main = display FullScreen white $ translate 100 100 $ circleSolid 100
