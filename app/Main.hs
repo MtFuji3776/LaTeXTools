@@ -104,6 +104,6 @@ main :: IO ()
 --main = play window white 24 initialBox drawBox updateBox nextBox
 --main = foldn (>>= return . (oneloop  40)) (initFrame 100 100 10 (1*(2+3) + (2+3)*4 + 5 * (1+2+3))) 1000 >>= \f -> display FullScreen white $ translate (-150) (-10) . scale 10 10 $  mconcat . map line $ mkedgePaths f
 main = do
-    f1 <- initFrame 10000 10000 40 $ 1*2*3
+    f1 <- initFrame 1000 1000 40 $ 1*2*3*4*5*6*7
     print f1
     simulate FullScreen white 60 f1 (scale 10 10 . mconcat . map line . mkedgePaths) (\_ -> oneloop)

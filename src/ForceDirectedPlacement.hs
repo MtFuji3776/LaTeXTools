@@ -25,7 +25,7 @@ cross f g = over _1 f . over _2 g
 
 -- フレームの形状とグラフの頂点数から決定する定数
 k_Cons :: Double -> Double -> [a] -> Double
-k_Cons w h vs = let n = fromIntegral $ length vs in  0.7 * sqrt  (w * h / n)
+k_Cons w h vs = let n = fromIntegral $ length vs in  1.1 * sqrt  (w * h / n)
 
 
 -- 1~wのランダム選択する関数。引数wで分母の数を決める。wが100ならば1/100 , 2/100 , ... , 100/100の中からランダム選択される。
@@ -97,7 +97,8 @@ repulsive__ (Ver n1 p1 d1) (Ver n2 p2 d2) k = if n1 == n2 then V 0 0 else
                     let delta = p2 - p1
                         z = norm delta
                         force = k*k / z -- kを定めていないことを忘れるべからず。Frameデータ型を定義したら引数にFrameを持たせるか？ 
-                    in (force / z) *: delta
+                    in if z == 0 then 10 -- z == 0のとき、attractiveは0になるので、repulsiveは100あれば十分なはず。頂点が重なるのはFrameの隅なので、repulsiveを強くしすぎても意味が薄い。
+                                 else (force / z) *: delta
 
 repulsive_ :: V.Vector Vertex -> Double -> (Int,Int) -> V.Vector Vertex
 repulsive_ vs k (i,j) =
@@ -118,7 +119,7 @@ repulsive frame =
 
 
 
-f_a d k = 0.9*d*d/k
+f_a d k = d*d/k
 
 attractive_ :: V.Vector Vertex -> Double -> (Int,Int) -> V.Vector Vertex
 attractive_ vs k (i,j) = if i == j then vs else
@@ -170,10 +171,10 @@ temperatureAction frame =
 
 cool :: Float -> Float -> Frame -> Frame
 cool ti tn frame = 
-    let t = fromRational . toRational $ ti  /  1.1^(floor tn)
+    let t = fromRational . toRational $  ti  /  tn
     in set temperature t frame
 
 oneloop :: Float -> Frame -> Frame
-oneloop t = cool 80 t . temperatureAction . repulsive . attractive 
+oneloop t = cool 100 t . temperatureAction . repulsive . attractive 
 
  
