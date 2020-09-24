@@ -102,6 +102,18 @@ drawVertex frame =
       circles = fmap drawcircle coors
   in pictures . Vec.toList $ circles
 
+bargraph :: Float -> Picture
+bargraph t = color green $ rectangleSolid 100 t
+
+setBarGraph :: Frame -> Picture
+setBarGraph frame = 
+    let doubleToFloat = fromRational . toRational
+        w = doubleToFloat $ view width frame
+        h = doubleToFloat $ view height frame
+        t = doubleToFloat $ view temperature frame
+    in (scale 10 10 . translate (w / 2 + 100) (h / 2 - t) $ bargraph t) <> (translate (w / 2) (h / 2 - 100) . text $ show t)
+
+
 foldn :: (a -> a) -> a -> Int -> a
 foldn f e 0 = e
 foldn f e n = foldn f (f e) (n-1)
@@ -113,8 +125,8 @@ main :: IO ()
 --main = play window white 24 initialBox drawBox updateBox nextBox
 --main = foldn (>>= return . (oneloop  40)) (initFrame 100 100 10 (1*(2+3) + (2+3)*4 + 5 * (1+2+3))) 1000 >>= \f -> display FullScreen white $ translate (-150) (-10) . scale 10 10 $  mconcat . map line $ mkedgePaths f
 main = do
-    f1 <- initFrame 10000 10000 40 $ 1*2*3*4*5*6*7*8
+    f1 <- initFrame 1000 1000 40 $ 1*2*3*4*5*6*7*8*9*10*11*12*13*14*15*16*17
     print f1
-    let framebox = scale 10 10 . color blue $ pictures $ map (line) $ [[(-5000,-5000),(-5000,5000)] ,[(-5000,5000),(5000,5000)] , [(5000,5000),(5000,-5000)], [(5000,-5000),(-5000,-5000)]]
-    simulate FullScreen white 60 f1 (\model -> framebox <> (scale 10 10 . drawVertex $ model) <> (scale 10 10 . mconcat . map line . mkedgePaths $ model) ) (\_ -> oneloop) -- Picture値関数はlet束縛で定義した方が良さげ
+    let framebox = scale 10 10 . color blue $ pictures $ map (line) $ [[(-500,-500),(-500,500)] ,[(-500,500),(500,500)] , [(500,500),(500,-500)], [(500,-500),(-500,-500)]]
+    simulate FullScreen white 60 f1 (\model -> setBarGraph model <> (scale 10 10 . translate 500 500 $ text "Here is (500,500)") <> framebox <> (scale 10 10 . drawVertex $ model) <> (scale 10 10 . mconcat . map line . mkedgePaths $ model) ) (\_ -> oneloop) -- Picture値関数はlet束縛で定義した方が良さげ
 --main = display FullScreen white $ translate 100 100 $ circleSolid 100

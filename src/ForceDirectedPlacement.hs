@@ -7,6 +7,7 @@ import Control.Lens
 import System.Random
 import qualified Graph as G
 import qualified Graphics.Gloss as Gloss
+import Control.Monad.State.Strict
 
 
 -- グラフの力学的レイアウト導出アルゴリズム
@@ -171,10 +172,19 @@ temperatureAction frame =
 
 cool :: Float -> Float -> Frame -> Frame
 cool ti tn frame = 
-    let t = fromRational . toRational $  ti  /  sqrt tn
+    let t = fromRational . toRational $  ti  /  sqrt (tn + 1)
     in set temperature t frame
 
 oneloop :: Float -> Frame -> Frame
-oneloop t = cool 900 t . temperatureAction . repulsive . attractive 
+oneloop t = cool 690 t . temperatureAction . repulsive . attractive 
 
- 
+countloop :: Integer -> Frame -> Frame
+countloop = oneloop . fromInteger
+
+type CountFrame = State Integer Frame -- Integer -> (Integer,Frame)と同型
+
+f_ :: Frame -> Integer -> (Frame,Integer)
+f_ frame n = (countloop (n+1) frame, n+1 )
+
+f :: Frame -> CountFrame
+f frame =  state $ f_ frame
